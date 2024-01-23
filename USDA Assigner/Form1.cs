@@ -1,10 +1,13 @@
 using System;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
+
 namespace USDA_Assigner
 {
+
     public partial class Form1 : Form
     {
         private static string selectedFolderPath = "";
@@ -19,29 +22,59 @@ namespace USDA_Assigner
         private string HeightPath = "";
         private string relativePath = "";
         private static int imageCount = 0;
+        private string diffusename = "diffuse";
+        private string normalname = "normal";
+        private string metalname = "metal";
+        private string roughname = "rough";
+        private string heightname = "height";
         private static string[] Hashes;
+        private ToolStripTextBox txtbxDiffuse = new ToolStripTextBox();
+        private ToolStripTextBox txtbxNormal = new ToolStripTextBox();
+        private ToolStripTextBox txtbxRough = new ToolStripTextBox();
+        private ToolStripTextBox txtbxMetal = new ToolStripTextBox();
+        private ToolStripTextBox txtbxHeight = new ToolStripTextBox();
+
 
         public Form1()
         {
             InitializeComponent();
             AddOpenList();
+            AddMapNames();
+
         }
 
         private void AddOpenList()
         {
             string[] filenames = Directory.GetFiles(projectPath).Select(Path.GetFileName).ToArray();
+            openToolStripMenuItem.DropDownItems.Clear();
             for (int i = 0; i < filenames.Length; i++)
             {
-                openToolStripMenuItem.DropDownItems.Add(filenames[i]);
+                string filename = filenames[i];
+
+                // Create a ToolStripButton for each file and attach the common Click event handler
+                ToolStripButton fileButton = new ToolStripButton(filename);
+                fileButton.Click += FileButton_Click;
+
+                openToolStripMenuItem.DropDownItems.Add(fileButton);
             }
+
+            // Common Click event handler for all file buttons
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             selectedFolderPath = ShowFolderDialog("Select a folder for the main path:");
             label1.Text = selectedFolderPath;
+            string modsFolder = Path.Combine(selectedFolderPath, "mods");
+            string[] modsSubfolders = Directory.GetDirectories(modsFolder);
+            string ModFolderName = Path.GetFileName(modsSubfolders[0]);
+
             CapturePath = Path.Combine(selectedFolderPath, "captures", "textures");
-            usdaPath = Path.Combine(selectedFolderPath, "mods", "gameReadyAssets");
+            usdaPath = Path.Combine(selectedFolderPath, "mods", ModFolderName);
+            TextureHashing();
+
+
+
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -49,6 +82,7 @@ namespace USDA_Assigner
             DiffusePath = ShowFolderDialog("Select a folder for Diffuse:");
             CalculateAndDisplayRelativePath(DiffusePath);
             label2.Text = relativePath.Replace('\\', '/');
+           
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -119,12 +153,9 @@ namespace USDA_Assigner
         private void TextureHashing()
         {
             string folderPath = Path.Combine(selectedFolderPath, "captures", "textures");
-            string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".dds" }; // Add more extensions if needed
 
-            // Get all files in the folder with the specified extensions
-            string[] imageFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.TopDirectoryOnly)
-                .Where(file => imageExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
-                .ToArray();
+            // Get all files in the folder with the .dds extension
+            string[] imageFiles = Directory.GetFiles(folderPath, "*.dds", SearchOption.TopDirectoryOnly);
 
             imageCount = imageFiles.Length;
 
@@ -140,9 +171,10 @@ namespace USDA_Assigner
             Hashes = new string[imageCount];
             for (int i = 0; i < imageCount; i++)
             {
-                Hashes[i] = imageNames[i];
+                Hashes[i] = imageNames[i].Replace(".dds", "");
             }
         }
+
 
         private void WriteUSDA()
         {
@@ -156,31 +188,65 @@ namespace USDA_Assigner
                 for (int i = 0; i < imageCount; i++)
                 {
                     sw.WriteLine("        over \"mat_" + Hashes[i] + "\"\r\n        {\r\n            over \"Shader\"\r\n            {");
-                    if (checkBox1.Checked)
+                    if (checkBox1.Checked == true)
                     {
-                        sw.WriteLine("                asset inputs:diffuse_texture = @./" + label2.Text + Hashes[i] + "_diffuse.dds@");
+                        if (File.Exists(DiffusePath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxDiffuse + ".a.rtex.dds"))
+                        {
+                          
+                            sw.WriteLine("                asset inputs:diffuse_texture = @./" + label2.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxDiffuse +".a.rtex.dds@");
+                        }
                     }
-                    if (checkBox2.Checked)
+                    if (checkBox4.Checked == true)
+
                     {
-                        sw.WriteLine("                asset inputs:reflectionroughness_texture = @./" + label3.Text + Hashes[i] + "_roughness.dds@");
+                      
+                                
+                                if (File.Exists(NormalPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_DX_Normal.n.rtex.dds"))
+                                {
+                                    sw.WriteLine("                asset inputs:normalmap_texture = @./" + label5.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_DX_Normal.n.rtex.dds@");
+                                }
+                          
+                                if (File.Exists(NormalPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OGL_Normal.n.rtex.dds"))
+                                {
+                                    sw.WriteLine("                asset inputs:normalmap_texture = @./" + label5.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OGL_Normal.n.rtex.dds@");
+                                }
+                         
+                                if (File.Exists(NormalPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OTH_Normal.n.rtex.dds"))
+                                {
+                                    sw.WriteLine("                asset inputs:normalmap_texture = @./" + label5.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OTH_Normal.n.rtex.dds@");
+                                }
+                           
+                        
                     }
-                    if (checkBox3.Checked)
+                    if (checkBox2.Checked == true)
                     {
-                        sw.WriteLine("                asset inputs:metallic_texture = @./" + label4.Text + Hashes[i] + "_metallic.dds@");
+                        if (File.Exists(RoughPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxRough + ".r.rtex.dds"))
+                        {
+                            sw.WriteLine("                asset inputs:reflectionroughness_texture = @./" + label3.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxRough + ".r.rtex.dds@");
+                        }
                     }
-                    if (checkBox4.Checked)
+                    if (checkBox3.Checked == true)
                     {
-                        sw.WriteLine("                asset inputs:normalmap_texture = @./" + label5.Text + Hashes[i] + "_normal.dds@");
+                        if (File.Exists(MetalPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxMetal + ".m.rtex.dds"))
+                        {
+                            sw.WriteLine("                asset inputs:metallic_texture = @./" + label4.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxMetal + ".m.rtex.dds@");
+                        }
                     }
-                    if (checkBox5.Checked)
+
+                    if (checkBox5.Checked == true)
                     {
-                        sw.WriteLine("                asset inputs:height_texture = @./" + label6.Text + Hashes[i] + "_height.dds@ (\r\n                    colorSpace = \"raw\"\r\n                )\r\n                float inputs:displace_in = 0.05");
+                        if (File.Exists(HeightPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxHeight + ".h.rtex.dds"))
+                        {
+                            sw.WriteLine("                asset inputs:height_texture = @./" + label6.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxHeight + ".h.rtex.dds@ (\r\n                    colorSpace = \"raw\"\r\n                )\r\n                float inputs:displace_in = 0.05");
+                        }
                     }
-                    sw.WriteLine("            }\r\n        }");
+
+                    sw.WriteLine("            }\r\n        }\r\n");
                 }
 
                 sw.WriteLine("    }\r\n}");
                 sw.WriteLine("#Generated with usda Generator from Cheev");
+
             }
         }
 
@@ -194,13 +260,13 @@ namespace USDA_Assigner
 
         }
 
-       
+
 
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
-         
 
-            
+
+
         }
 
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -216,11 +282,16 @@ namespace USDA_Assigner
                 using (StreamWriter sw = new StreamWriter(projectsPath))
                 {
                     sw.WriteLine(label1.Text);
-                    sw.WriteLine(label2.Text);
-                    sw.WriteLine(label3.Text);
-                    sw.WriteLine(label4.Text);
-                    sw.WriteLine(label5.Text);
-                    sw.WriteLine(label6.Text);
+                    sw.WriteLine(DiffusePath);
+                    sw.WriteLine(RoughPath);
+                    sw.WriteLine(MetalPath);
+                    sw.WriteLine(NormalPath);
+                    sw.WriteLine(HeightPath);
+                    sw.WriteLine(txtbxDiffuse.Text);
+                    sw.WriteLine(txtbxNormal.Text);
+                    sw.WriteLine(txtbxRough.Text);
+                    sw.WriteLine(txtbxMetal.Text);
+                    sw.WriteLine(txtbxHeight.Text);
                 }
 
             }
@@ -229,10 +300,128 @@ namespace USDA_Assigner
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            
+
 
         }
+
+        private void testToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void toolStripDropDownButton2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void AddMapNames()
+        {
+            txtbxDiffuse.Text = diffusename;
+            txtbxNormal.Text = normalname;
+            txtbxRough.Text = roughname;
+            txtbxMetal.Text = metalname;
+            txtbxHeight.Text = heightname;
+            diffuseToolStripMenuItem.DropDownItems.Add(txtbxDiffuse);
+            normalToolStripMenuItem.DropDownItems.Add(txtbxNormal);
+            roughnessToolStripMenuItem.DropDownItems.Add(txtbxRough);
+            metalnessToolStripMenuItem.DropDownItems.Add(txtbxMetal);
+            heightToolStripMenuItem.DropDownItems.Add(txtbxHeight);
+        }
+
+        private void FileButton_Click(object sender, EventArgs e)
+        {
+            // Get the sender (button) and extract the file name from the button's text
+            ToolStripButton button = (ToolStripButton)sender;
+            string fileName = button.Text;
+
+            txtName.Text = fileName.Replace(".uap", "");
+            StreamReader sr = new StreamReader(projectPath + "\\" + fileName);
+            string line = "temp";
+            for (int i = 0; i < 11; i++)
+            {
+                line = sr.ReadLine();
+                if (line != null)
+                {
+
+
+                    if (i == 0)
+                    {
+                        selectedFolderPath = line;
+                        label1.Text = selectedFolderPath;
+                        string modsFolder = Path.Combine(selectedFolderPath, "mods");
+                        string[] modsSubfolders = Directory.GetDirectories(modsFolder);
+                        string ModFolderName = Path.GetFileName(modsSubfolders[0]);
+                        CapturePath = Path.Combine(selectedFolderPath, "captures", "textures");
+                        usdaPath = Path.Combine(selectedFolderPath, "mods", ModFolderName);
+                    }
+                    if (i == 1)
+                    {
+                        DiffusePath = line;
+                        CalculateAndDisplayRelativePath(DiffusePath);
+                        label2.Text = relativePath.Replace('\\', '/');
+                    }
+                    if (i == 2)
+                    {
+                        RoughPath = line;
+                        CalculateAndDisplayRelativePath(RoughPath);
+                        label3.Text = relativePath.Replace('\\', '/');
+                    }
+                    if (i == 3)
+                    {
+                        MetalPath = line;
+                        CalculateAndDisplayRelativePath(MetalPath);
+                        label4.Text = relativePath.Replace('\\', '/');
+                    }
+                    if (i == 4)
+                    {
+                        NormalPath = line;
+                        CalculateAndDisplayRelativePath(NormalPath);
+                        label5.Text = relativePath.Replace('\\', '/');
+                    }
+                    if (i == 5)
+                    {
+                        HeightPath = line;
+                        CalculateAndDisplayRelativePath(HeightPath);
+                        label6.Text = relativePath.Replace('\\', '/');
+                    }
+                    if (i == 6)
+                    {
+                        diffusename = line;
+                    }
+                    if (i == 7)
+                    {
+                        normalname = line;
+                    }
+                    if (i == 8)
+                    {
+                        roughname = line;
+                    }
+                    if (i == 9)
+                    {
+                        metalname = line;
+                    }
+                    if (i == 10)
+                    {
+                        heightname = line;
+                    }
+                }
+
+                AddMapNames();
+
+            }
+            sr.Close();
+        }
+
+        private void metalToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void toolStripSplitButton1_ButtonClick(object sender, EventArgs e)
+        {
+
+        }
+
        
-        
     }
 }
