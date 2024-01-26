@@ -211,7 +211,12 @@ namespace USDA_Assigner
                                     sw.WriteLine("                asset inputs:normalmap_texture = @./" + label5.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OGL_Normal.n.rtex.dds@");
                                 }
                          
-                                if (File.Exists(NormalPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OTH_Normal.n.rtex.dds"))
+                                if (File.Exists(NormalPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + ".n.rtex.dds"))
+                                {
+                                    sw.WriteLine("                asset inputs:normalmap_texture = @./" + label5.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + ".n.rtex.dds@");
+                                }
+
+                                 if (File.Exists(NormalPath + "\\" + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OTH_Normal.n.rtex.dds"))
                                 {
                                     sw.WriteLine("                asset inputs:normalmap_texture = @./" + label5.Text + Hashes[i].Replace(".dds", "") + "_" + txtbxNormal + "_OTH_Normal.n.rtex.dds@");
                                 }
